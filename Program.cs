@@ -333,7 +333,6 @@ namespace ModDownloader
 
             File.WriteAllText(Path.Combine(modDirectory, "taint"), mod.LatestVersion);
 
-            Directory.Delete(tempExtractDirectory, true);
             File.Delete(tempZipFile);
 
             Console.WriteLine("Mod downloaded and extracted successfully.");
