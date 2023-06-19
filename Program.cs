@@ -260,7 +260,7 @@ namespace ModDownloader
                 return;
             }
 
-            foreach (Mod mod in modsToDownload)
+            foreach (Mod mod in modsToDownload.Where(m => m.Download))
             {
                 string modFilesJson = await getString($"/games/3959/mods/{mod.Id}/files/{mod.LatestVersion}", settings.AccessToken);
 
