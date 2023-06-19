@@ -280,6 +280,8 @@ namespace ModDownloader
                     Console.WriteLine($"Failed to download and extract {mod.Name}. Skipping.");
                 }
             }
+
+            Console.WriteLine("Done.");
         }
 
         private static JArray extractModsByGameId(string subscribedModsJson, int gameId)
