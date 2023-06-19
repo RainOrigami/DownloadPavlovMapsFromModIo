@@ -1,5 +1,3 @@
-![image](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/assets/51454971/7e4c1f90-d583-45e8-adfa-80dad4ed3d37)
-
 # Purpose
 
 It used to be possible to download workshop maps without having to run pavlov, because Steam downloaded those when you were subscribed.
@@ -37,6 +35,8 @@ These mods are then listed with their respective required action (new, update, u
 Press `y` and `Enter` to confirm these actions. The download will begin and you will see the progress of the download for each mod.
 
 After all mods are downloaded, press any key to exit the program.
+
+![image](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/assets/51454971/b9ace177-cc13-47ef-ab32-b3466c848ee1)
 
 # Errors
 
