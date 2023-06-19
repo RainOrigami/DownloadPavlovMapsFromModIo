@@ -270,7 +270,15 @@ namespace ModDownloader
 
                 Console.WriteLine($"Downloading: {mod.Name}");
 
-                await downloadAndExtractMod(downloadUrl, settings, mod);
+                try
+                {
+                    await downloadAndExtractMod(downloadUrl, settings, mod);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine($"Failed to download and extract {mod.Name}. Skipping.");
+                }
             }
         }
 
