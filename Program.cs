@@ -231,7 +231,17 @@ namespace ModDownloader
                 {
                     Console.Write("Exists");
 
-                    string currentVersion = File.ReadAllText(Path.Combine(settings.PavlovModsDirectory, $"UGC{mod["id"]}", "taint"));
+                    string currentVersion = string.Empty;
+                    try
+                    {
+                        currentVersion = File.ReadAllText(Path.Combine(settings.PavlovModsDirectory, $"UGC{mod["id"]}", "taint"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($", possibly broken and needs to be redownloaded");
+                        download = true;
+                        continue;
+                    }
 
                     if (currentVersion == latestVersion)
                     {
@@ -319,23 +329,171 @@ namespace ModDownloader
             string tempZipFile = Path.GetTempFileName();
             string tempExtractDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-            await download(downloadUrl, tempZipFile, settings.AccessToken);
+            try
+            {
+                await download(downloadUrl, tempZipFile, settings.AccessToken);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    File.Delete(tempZipFile);
+                }
+                catch { }
+
+                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Failed to download {mod.Name}. Skipping.");
+                throw ex;
+            }
 
             Console.WriteLine("Extracting mod...");
 
-            ZipFile.ExtractToDirectory(tempZipFile, tempExtractDirectory);
+            try
+            {
+                ZipFile.ExtractToDirectory(tempZipFile, tempExtractDirectory);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    File.Delete(tempZipFile);
+                }
+                catch { }
 
-            Directory.CreateDirectory(modDirectory);
+                try
+                {
+                    Directory.Delete(tempExtractDirectory, true);
+                }
+                catch { }
+
+                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Failed to extract {mod.Name}. Skipping.");
+                throw ex;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(modDirectory);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    File.Delete(tempZipFile);
+                }
+                catch { }
+
+                try
+                {
+                    Directory.Delete(tempExtractDirectory, true);
+                }
+                catch { }
+
+                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Failed to create mod directory {modDirectory}. Skipping.");
+                throw ex;
+            }
 
             string modDataDirectory = Path.Combine(modDirectory, "Data");
 
-            Directory.Move(tempExtractDirectory, modDataDirectory);
+            try
+            {
+                MoveDirectory(tempExtractDirectory, modDataDirectory);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    File.Delete(tempZipFile);
+                }
+                catch { }
 
-            File.WriteAllText(Path.Combine(modDirectory, "taint"), mod.LatestVersion);
+                try
+                {
+                    Directory.Delete(tempExtractDirectory, true);
+                }
+                catch { }
 
-            File.Delete(tempZipFile);
+                try
+                {
+                    Directory.Delete(modDirectory, true);
+                }
+                catch { }
+
+                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Failed to move mod files to {modDataDirectory}. Skipping.");
+                throw ex;
+            }
+
+            try
+            {
+                File.WriteAllText(Path.Combine(modDirectory, "taint"), mod.LatestVersion);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    File.Delete(tempZipFile);
+                }
+                catch { }
+
+                try
+                {
+                    Directory.Delete(tempExtractDirectory, true);
+                }
+                catch { }
+
+                try
+                {
+                    Directory.Delete(modDirectory, true);
+                }
+                catch { }
+
+                try
+                {
+                    File.Delete(Path.Combine(modDirectory, "taint"));
+                }
+                catch { }
+
+                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Failed to create taint file for {mod.Name}. Skipping.");
+                throw ex;
+            }
+
+            try
+            {
+                File.Delete(tempZipFile);
+            }
+            catch { }
 
             Console.WriteLine("Mod downloaded and extracted successfully.");
+        }
+
+        static void MoveDirectory(string sourceDir, string targetDir)
+        {
+            if (!Directory.Exists(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+
+            string[] files = Directory.GetFiles(sourceDir);
+
+            foreach (string file in files)
+            {
+                string fileName = Path.GetFileName(file);
+                string targetPath = Path.Combine(targetDir, fileName);
+                File.Copy(file, targetPath, true);
+            }
+
+            string[] subDirectories = Directory.GetDirectories(sourceDir);
+
+            foreach (string subDir in subDirectories)
+            {
+                string targetSubDir = Path.Combine(targetDir, Path.GetFileName(subDir));
+                MoveDirectory(subDir, targetSubDir);
+            }
+
+            Directory.Delete(sourceDir, true);
         }
     }
 }
