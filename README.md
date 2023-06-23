@@ -44,8 +44,6 @@ After all mods are downloaded, press any key to exit the program.
 
 Make sure you have [.net 6](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.18-windows-x64-installer) installed.
 
-If that didn't help, try the larger -SC.exe which contains all required .net 6 files.
-
 ## Access token is very short
 
 The correct OAuth access token is over 1000 characters long. If your access token is too short, you probably copied the API key instead. Make sure to follow the first time setup guide on how to generate an OAuth Access Token.
