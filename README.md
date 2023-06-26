@@ -54,7 +54,7 @@ The supplied token did not allow for access to your Mod.io profile. Either your 
 
 ## Could not find Pavlov VR mods directory
 
-Usually Pavlov stores the mods in `%localappdata%\Pavlov\Saved\Mods`. If this directory was not found, you either do not have Pavlov installed, never started it, or used some black magic to store your mods somewhere else.
+Usually Pavlov stores the mods in `%localappdata%\Pavlov\Saved\Mods`. If this directory was not found, you either do not have Pavlov installed, never started it, or changed ModDirectory in your GameUserSettings.ini to store your mods somewhere else.
 Either install and start Pavlov at least once before running the tool to properly autodetect the directory, or supply the correct path yourself.
 
 ## Failed to get subscribed mods from Mod.io
