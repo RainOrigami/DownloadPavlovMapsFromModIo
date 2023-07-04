@@ -258,6 +258,12 @@ namespace ModDownloader
                 Console.WriteLine($"{mod.Name[..Math.Min(mod.Name.Length, 60)].PadRight(longestName)} | {(mod.Exists ? "Exists" : "New"),-6} | {(mod.Download ? "Update required" : "Up to date")}");
             }
 
+            if (modsToDownload.Count(m => m.Download) == 0)
+            {
+                Console.WriteLine("No updates required.");
+                return;
+            }
+
             Console.Write("Do you want to continue? (Y/N): ");
             string continueOption = Console.ReadLine();
 
