@@ -36,7 +36,7 @@ Press `y` and `Enter` to confirm these actions. The download will begin and you 
 
 After all mods are downloaded, press any key to exit the program.
 
-![image](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/assets/51454971/b9ace177-cc13-47ef-ab32-b3466c848ee1)
+![image](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/assets/51454971/c027606d-b899-4a7d-bf3d-2acacb05e699)
 
 # Errors
 
