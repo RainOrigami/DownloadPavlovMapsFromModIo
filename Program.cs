@@ -205,8 +205,6 @@ namespace ModDownloader
 
             foreach (var mod in subscribedMods)
             {
-                Console.Write($"{mod["name"]} - ");
-
                 string? latestVersion = null;
 
                 foreach (var platform in mod["platforms"])
@@ -229,8 +227,6 @@ namespace ModDownloader
 
                 if (exists)
                 {
-                    Console.Write("Exists");
-
                     string currentVersion = string.Empty;
                     try
                     {
@@ -238,27 +234,28 @@ namespace ModDownloader
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($", possibly broken and needs to be redownloaded");
                         download = true;
                         continue;
                     }
 
                     if (currentVersion == latestVersion)
                     {
-                        Console.WriteLine(", up to date");
                         download = false;
                     }
-                    else
-                    {
-                        Console.WriteLine(", update required");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("New, download required");
                 }
 
                 modsToDownload.Add(new(mod["id"].ToString(), latestVersion, mod["name"].ToString(), exists, download));
+            }
+
+            int longestName = modsToDownload.Max(m => m.Name.Length);
+            if (longestName > 60)
+            {
+                longestName = 60;
+            }
+
+            foreach (Mod mod in modsToDownload.OrderBy(m => m.Download).OrderByDescending(m => m.Exists))
+            {
+                Console.WriteLine($"{mod.Name[..Math.Min(mod.Name.Length, 60)].PadRight(longestName)} | {(mod.Exists ? "Exists" : "New"),-6} | {(mod.Download ? "Update required" : "Up to date")}");
             }
 
             Console.Write("Do you want to continue? (Y/N): ");
@@ -270,7 +267,7 @@ namespace ModDownloader
                 return;
             }
 
-            foreach (Mod mod in modsToDownload.Where(m => m.Download))
+            foreach (Mod mod in modsToDownload.Where(m => m.Download).OrderByDescending(m => m.Exists))
             {
                 string modFilesJson = await getString($"/games/3959/mods/{mod.Id}/files/{mod.LatestVersion}", settings.AccessToken);
 
