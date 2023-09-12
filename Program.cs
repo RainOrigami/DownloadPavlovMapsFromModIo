@@ -43,11 +43,17 @@ namespace ModDownloader
 
         private Settings? settings = null;
 
-        static async Task Main()
+        static async Task Main(string[] args)
         {
+            bool directDownload = false;
+            if (args[0] == "--yes")
+            {
+                directDownload = true;
+            }
+
             try
             {
-                await new Program().execute();
+                await new Program().execute(directDownload);
             }
             catch (Exception ex)
             {
@@ -111,7 +117,7 @@ namespace ModDownloader
             }
         }
 
-        private async Task execute()
+        private async Task execute(bool directDownload)
         {
             if (File.Exists(settingsPath))
             {
@@ -264,13 +270,16 @@ namespace ModDownloader
                 return;
             }
 
-            Console.Write("Do you want to continue? (Y/N): ");
-            string continueOption = Console.ReadLine();
-
-            if (continueOption?.Trim().ToLower() != "y")
+            if (!directDownload)
             {
-                Console.WriteLine("Download canceled.");
-                return;
+                Console.Write("Do you want to continue? (Y/N): ");
+                string continueOption = Console.ReadLine();
+
+                if (continueOption?.Trim().ToLower() != "y")
+                {
+                    Console.WriteLine("Download canceled.");
+                    return;
+                }
             }
 
             foreach (Mod mod in modsToDownload.Where(m => m.Download).OrderByDescending(m => m.Exists))
