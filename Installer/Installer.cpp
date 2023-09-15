@@ -39,7 +39,7 @@ int main()
         {
         cout << "File Path Created, downloading file";
         }
-        string dwnld_URL = "https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/blob/main/Program/Compiled/DownloadPavlovMapsFromModIo.exe"; //binary download path, may need to use raw file link instead at some point
+        string dwnld_URL = "https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/raw/main/Program/Compiled/DownloadPavlovMapsFromModIo.exe"; //binary download path, may need to use raw file link instead at some point
         URLDownloadToFile(NULL, dwnld_URL.c_str(), installdir.c_str(), 0, NULL);
         sleep_for(5s);
         installedexedir.append(installdir);
