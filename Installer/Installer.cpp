@@ -14,9 +14,9 @@ using std::chrono::system_clock;
  
 int main()
 {
+    system("title PavlovModioDownloaderInstaller");
     // Path to Dotnet directory
     const char* dotnetdir = "C:/Program Files/dotnet";
-    string installdir;
     // Structure which would store the metadata
     struct stat sb;
  
@@ -25,20 +25,25 @@ int main()
     // If block executes if path exists
     if (stat(dotnetdir, &sb) == 0)
     {
-        clog <<"Dotnet framework installation found!"<<endl;
-        cout <<"Set install path for Pavlov Map Downloader"<<endl;
-        cin >> installdir;
+        string installdir;
+        cout <<"Welcome to the Pavlov Map Auto Downloader"<<endl<<"Please Set your desired install path for Pavlov Map Downloader"<<endl;
+        cin >> installdir; //sets target install dir
         cout <<"Attempting to install at "<<installdir<<endl;
-        string installdircmd = "md " + installdir;
-        system(installdircmd.c_str());
+        //sets command line strings
+        string createinstalldircmd = "md " + installdir; // link below this will need to be changed if you merge the PR
+        string rawurl = " https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/master/Program/Compiled/DownloadPavlovMapsFromModIo.exe";
+        string installdir_and_url = installdir + rawurl;
+        string installdircmd = "curl -O --output-dir " + installdir_and_url;
+        //commands
+        system(createinstalldircmd.c_str());
         cout << "File Path Created, downloading file";
-        installdircmd.assign("cd " + installdir);
         system(installdircmd.c_str());
-        system("curl -O https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/master/Program/Compiled/DownloadPavlovMapsFromModIo.exe");
+        string exedir = "start " + installdir + "DownloadPavlovMapsFromModIo.exe";
         sleep_for(5s);
-        system("start DownloadPavlovMapsFromModIo.exe");
+        system("start DownloadPavlovMapsFromModIo.exe"); //Boots the installed installer
+        cout << "Download Successful!"<<endl;
         sleep_for(10s);
-        exit(0);
+        exit(0); //exits program after delay
     }
     else
         {
