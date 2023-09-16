@@ -16,9 +16,7 @@ int main()
 {
     // Path to Dotnet directory
     const char* dotnetdir = "C:/Program Files/dotnet";
-    std::string installdir;
-    std::string installedexedir;
-
+    string installdir;
     // Structure which would store the metadata
     struct stat sb;
  
@@ -27,27 +25,19 @@ int main()
     // If block executes if path exists
     if (stat(dotnetdir, &sb) == 0)
     {
-        clog <<"Dotnet framework installation found!";
+        clog <<"Dotnet framework installation found!"<<endl;
         cout <<"Set install path for Pavlov Map Downloader"<<endl;
         cin >> installdir;
         cout <<"Attempting to install at "<<installdir<<endl;
-        if(_mkdir("installdir") == -1)
-        {
-        cerr << "Error"<< endl;
-        }
-        else
-        {
+        string installdircmd = "md " + installdir;
+        system(installdircmd.c_str());
         cout << "File Path Created, downloading file";
-        }
-        string dwnld_URL = "https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/raw/main/Program/Compiled/DownloadPavlovMapsFromModIo.exe"; //binary download path, may need to use raw file link instead at some point
-        installdir.append("cd ");
-        installdir.append(installdir);
-        system(installdir.c_str());
-        system("curl - O https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/raw/main/Program/Compiled/DownloadPavlovMapsFromModIo.exe");
+        installdircmd.assign("cd " + installdir);
+        system(installdircmd.c_str());
+        system("curl -O https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/master/Program/Compiled/DownloadPavlovMapsFromModIo.exe");
         sleep_for(5s);
-        installedexedir.append(installdir);
-        installedexedir.append("DownloadPavlovMapsFromModIo.exe");
         system("start DownloadPavlovMapsFromModIo.exe");
+        sleep_for(10s);
         exit(0);
     }
     else
