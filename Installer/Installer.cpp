@@ -33,18 +33,21 @@ int main()
         cout <<"Attempting to install at "<<installdir<<endl;
         if(_mkdir("installdir") == -1)
         {
-        cerr << " Error"<< endl;
+        cerr << "Error"<< endl;
         }
         else
         {
         cout << "File Path Created, downloading file";
         }
         string dwnld_URL = "https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/raw/main/Program/Compiled/DownloadPavlovMapsFromModIo.exe"; //binary download path, may need to use raw file link instead at some point
-        URLDownloadToFile(NULL, dwnld_URL.c_str(), installdir.c_str(), 0, NULL);
+        installdir.append("cd ");
+        installdir.append(installdir);
+        system(installdir.c_str());
+        system("curl - O https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/raw/main/Program/Compiled/DownloadPavlovMapsFromModIo.exe");
         sleep_for(5s);
         installedexedir.append(installdir);
         installedexedir.append("DownloadPavlovMapsFromModIo.exe");
-        ShellExecute(NULL, "open", installedexedir.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+        system("start DownloadPavlovMapsFromModIo.exe");
         exit(0);
     }
     else
