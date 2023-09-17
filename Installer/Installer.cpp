@@ -44,7 +44,7 @@ int main()
         installdir_and_url.assign(installdir + rawurl);
         installdircmd.assign("curl -O --output-dir " + installdir_and_url);
         system(installdircmd.c_str()); //Line below downloads the version txt
-        system("curl -O https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/main/Program/Compiled/version.txt");
+        system("curl https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/main/Program/Compiled/version.txt -o UserVersion.txt");
         sleep_for(5s);
         system("start DownloadPavlovMapsFromModIo.exe"); //Boots the installed exe
         cout << "Download Successful!"<<endl;
