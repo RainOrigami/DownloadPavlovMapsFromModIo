@@ -30,6 +30,7 @@ int main()
         cin >> installdir; //sets target install dir
         cout <<"Attempting to install at "<<installdir<<endl;
         //sets command line strings
+        installdir.assign(installdir + "\PavlovModioDownloader");
         string createinstalldircmd = "md " + installdir; // link below this will need to be changed if you merge the PR
         string rawurl = " https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/master/Program/Compiled/DownloadPavlovMapsFromModIo.exe";
         string installdir_and_url = installdir + rawurl;
@@ -39,8 +40,13 @@ int main()
         cout << "File Path Created, downloading file";
         system(installdircmd.c_str());
         string exedir = "start " + installdir + "DownloadPavlovMapsFromModIo.exe";
+        rawurl.assign(" https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/master/Program/Compiled/version.txt");
+        installdir_and_url.assign(installdir + rawurl);
+        installdircmd.assign("curl -O --output-dir " + installdir_and_url);
+        system(installdircmd.c_str()); //Line below downloads the version txt
+        system("curl -O https://raw.githubusercontent.com/THW-Reaper/DownloadPavlovMapsFromModIoWithInstaller/main/Program/Compiled/version.txt");
         sleep_for(5s);
-        system("start DownloadPavlovMapsFromModIo.exe"); //Boots the installed installer
+        system("start DownloadPavlovMapsFromModIo.exe"); //Boots the installed exe
         cout << "Download Successful!"<<endl;
         sleep_for(10s);
         exit(0); //exits program after delay
