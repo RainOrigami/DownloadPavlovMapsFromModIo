@@ -10,6 +10,7 @@ This tool will download and update your subscribed Mod.io Pavlov VR mods.
 
 # Usage
 
+Make sure you have [.net 6](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win10-x64&apphost_version=6.0.22) installed.
 To run, simply [download](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/releases) and execute.
 
 ## First time setup
@@ -42,7 +43,10 @@ After all mods are downloaded, press any key to exit the program.
 
 ## Program does not start
 
-Make sure you have [.net 6](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-6.0.18-windows-x64-installer) installed.
+Make sure you have [.net 6](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win10-x64&apphost_version=6.0.22) installed.  
+You may have to start the program in a command line window to get its error message output.
+
+https://github.com/RainOrigami/DownloadPavlovMapsFromModIo/assets/51454971/21a1973b-4883-49a8-b9af-2951d8000a99
 
 ## Access token is very short
 
