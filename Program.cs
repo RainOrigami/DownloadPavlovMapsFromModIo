@@ -35,7 +35,7 @@ namespace ModDownloader
     class Program
     {
         private const string settingsPath = "./settings.json";
-        private const string pavlovModsDirectoryBasePath = "%localappdata%\\Pavlov\\Saved\\Mods";
+        private const string pavlovSettingsDirectoryBasePath = "%localappdata%\\Pavlov\\Saved";
         private const string modIoBaseUrl = "https://api.mod.io/v1";
 
         record Settings(string AccessToken, string PavlovModsDirectory);
@@ -43,26 +43,65 @@ namespace ModDownloader
 
         private Settings? settings = null;
 
+        private bool directDownload = false;
+        private bool subscribedOnly = false;
+
         static async Task Main(string[] args)
         {
+            Console.WriteLine("Pavlov VR Mod Downloader version 7");
+
             bool directDownload = false;
-            if (args[0] == "--yes")
+            bool subscribedOnly = false;
+
+            foreach (string arg in args)
             {
-                directDownload = true;
+                switch (arg.ToLower().Trim())
+                {
+                    case "--yes":
+                        directDownload = true;
+
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("Direct download enabled. No confirmation will be asked before downloading mods. Program will automatically exit after download is complete.");
+                        Console.ResetColor();
+
+                        break;
+                    case "--subscribedonly":
+                        subscribedOnly = true;
+
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("Subscribed only enabled. Only subscribed mods will be downloaded.");
+                        Console.ResetColor();
+
+                        break;
+                    default:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Unknown argument: {arg}");
+                        Console.ResetColor();
+                        break;
+                }
             }
 
             try
             {
-                await new Program().execute(directDownload);
+                await new Program(directDownload, subscribedOnly).execute();
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
 
-            Console.WriteLine();
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
+            if (!directDownload)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Press any key to exit.");
+                Console.ReadKey();
+            }
+        }
+
+        public Program(bool directDownload, bool subscribedOnly)
+        {
+            this.directDownload = directDownload;
+            this.subscribedOnly = subscribedOnly;
         }
 
         private static HttpClient createClient(string accessToken)
@@ -117,7 +156,7 @@ namespace ModDownloader
             }
         }
 
-        private async Task execute(bool directDownload)
+        private async Task execute()
         {
             if (File.Exists(settingsPath))
             {
@@ -149,24 +188,59 @@ namespace ModDownloader
                     }
                 }
 
-                string pavlovModsDirectory = Environment.ExpandEnvironmentVariables(pavlovModsDirectoryBasePath);
+                string pavlovSettingsDirectory = Environment.ExpandEnvironmentVariables(pavlovSettingsDirectoryBasePath);
+                string pavlovModsDirectory = string.Empty;
+                if (!Directory.Exists(pavlovSettingsDirectory))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Could not find Pavlov VR settings directory at {pavlovSettingsDirectory}. Make sure you have Pavlov VR installed.");
+                    Console.ResetColor();
+                    Console.WriteLine("To continue you will have to provide the Pavlov VR mods directory manually in the next step.");
+                }
+                else
+                {
+                    pavlovModsDirectory = File.ReadAllLines(Path.Combine(pavlovSettingsDirectory, "Config", "Windows", "GameUserSettings.ini")).FirstOrDefault(l => l.ToLower().StartsWith("moddirectory="))?.Split('=')[1] ?? string.Empty;
 
+                    if (string.IsNullOrEmpty(pavlovModsDirectory))
+                    {
+                        pavlovModsDirectory = Path.Combine(pavlovSettingsDirectory, "Mods");
+
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Could not find overwrite for Pavlov VR mods directory in {Path.Combine(pavlovSettingsDirectory, "Config", "Windows", "GameUserSettings.ini")}. Therefore default mods location {pavlovModsDirectory} is assumed to be the correct one.");
+                        Console.ResetColor();
+                    }
+                }
+
+                bool requestPavlovModsDirectory = false;
                 if (Directory.Exists(pavlovModsDirectory))
                 {
-                    Console.Write($"Pavlov VR mods directory found at {pavlovModsDirectory}. Do you want to use this directory? (Y/N): ");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"Pavlov VR mods directory found at {pavlovModsDirectory}.");
+                    Console.ResetColor();
+                    Console.Write("Do you want to use this directory? (Y/n): ");
                     string? pavlovModsDirectoryOption = Console.ReadLine();
 
-                    if (pavlovModsDirectoryOption?.Trim().ToLower() != "y")
+                    if (pavlovModsDirectoryOption?.Trim().ToLower() != "y" && !string.IsNullOrEmpty(pavlovModsDirectoryOption?.Trim()))
                     {
-                        Console.Write("Enter the path to your Pavlov VR mods directory: ");
-                        pavlovModsDirectory = Console.ReadLine()!;
+                        requestPavlovModsDirectory = true;
                     }
                 }
                 else
                 {
-                    Console.Write("Could not find Pavlov VR mods directory.");
+                    requestPavlovModsDirectory = true;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Could not find Pavlov VR mods directory.");
+                    Console.ResetColor();
+                }
+
+                if (requestPavlovModsDirectory)
+                {
                     Console.Write("Enter the path to your Pavlov VR mods directory: ");
-                    pavlovModsDirectory = Console.ReadLine()!;
+                    do
+                    {
+                        pavlovModsDirectory = Console.ReadLine()!;
+                    } while (!Directory.Exists(pavlovModsDirectory));
                 }
 
                 this.settings = new(accessToken, pavlovModsDirectory);
@@ -175,7 +249,7 @@ namespace ModDownloader
             }
 
             string? subscribedModsJson = null;
-            JArray? subscribedMods = null;
+            List<JObject>? subscribedMods = null;
 
             try
             {
@@ -183,8 +257,10 @@ namespace ModDownloader
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine("Failed to get subscribed mods from Mod.io. Make sure your token is correct and has read permissions.");
+                Console.ResetColor();
                 return;
             }
 
@@ -194,17 +270,56 @@ namespace ModDownloader
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine("Failed to extract Pavlov VR mods from subscribed mods. Make sure you are subscribed to Pavlov VR mods and that your token is correct.");
+                Console.ResetColor();
+                if (subscribedOnly)
+                {
+                    return;
+                }
+
+                subscribedMods = new();
+            }
+
+            Console.WriteLine($"Found {subscribedMods.Count} subscribed Pavlov VR mods.");
+
+            if (subscribedMods.Count == 0 && subscribedOnly)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("No Pavlov VR mods found. Make sure you are subscribed to Pavlov VR mods or run without --subscribedOnly.");
+                Console.ResetColor();
                 return;
             }
 
-            Console.WriteLine($"Found {subscribedMods.Count} Pavlov VR mods.");
-
-            if (subscribedMods.Count == 0)
+            if (!subscribedOnly)
             {
-                Console.WriteLine("No Pavlov VR mods found. Make sure you are subscribed to Pavlov VR mods.");
-                return;
+                string[] installedMods = Directory.GetDirectories(this.settings.PavlovModsDirectory).Where(m => !subscribedMods.Any(s => m.EndsWith($"UGC{s["id"]}"))).ToArray();
+
+                Console.WriteLine($"Found {installedMods.Length} installed but not subscribed Pavlov VR mods.");
+                Console.WriteLine("Checking for updates...");
+
+                foreach (string modDirectory in installedMods)
+                {
+                    string modId = modDirectory.Split("UGC")[1];
+
+                    try
+                    {
+                        JObject mod = JObject.Parse(await getString($"/games/3959/mods/{modId}", this.settings.AccessToken));
+                        if (mod["error"] is not null)
+                        {
+                            throw new Exception(mod["error"]?["message"]?.ToString() ?? $"Unknown error ({mod})");
+                        }
+                        subscribedMods.Add(mod);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine(ex.Message);
+                        Console.WriteLine($"Failed to get mod information for {modDirectory}. Skipping.");
+                        Console.ResetColor();
+                    }
+                }
             }
 
             List<Mod> modsToDownload = new();
@@ -224,7 +339,9 @@ namespace ModDownloader
 
                 if (latestVersion == null)
                 {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine("Could not find a Windows version of this mod. Skipping.");
+                    Console.ResetColor();
                     continue;
                 }
 
@@ -266,18 +383,22 @@ namespace ModDownloader
 
             if (modsToDownload.Count(m => m.Download) == 0)
             {
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("No updates required.");
+                Console.ResetColor();
                 return;
             }
 
             if (!directDownload)
             {
-                Console.Write("Do you want to continue? (Y/N): ");
-                string continueOption = Console.ReadLine();
-
-                if (continueOption?.Trim().ToLower() != "y")
+                Console.Write("Do you want to continue? (Y/n): ");
+                string? continueOption = Console.ReadLine();
+                
+                if (continueOption?.Trim().ToLower() != "y" && !string.IsNullOrEmpty(continueOption?.Trim()))
                 {
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Download canceled.");
+                    Console.ResetColor();
                     return;
                 }
             }
@@ -298,23 +419,25 @@ namespace ModDownloader
                 }
                 catch (Exception ex)
                 {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine(ex.Message);
                     Console.WriteLine($"Failed to download and extract {mod.Name}. Skipping.");
+                    Console.ResetColor();
                 }
             }
 
             Console.WriteLine("Done.");
         }
 
-        private static JArray extractModsByGameId(string subscribedModsJson, int gameId)
+        private static List<JObject> extractModsByGameId(string subscribedModsJson, int gameId)
         {
             JObject jsonData = JObject.Parse(subscribedModsJson);
-            JArray mods = jsonData["data"] as JArray;
-            JArray selectedMods = new JArray();
+            JArray mods = (JArray)jsonData["data"]!;
+            List<JObject> selectedMods = new();
 
-            foreach (var mod in mods)
+            foreach (JObject mod in mods)
             {
-                int modGameId = mod["game_id"].Value<int>();
+                int modGameId = mod["game_id"]!.Value<int>();
                 if (modGameId == gameId)
                 {
                     selectedMods.Add(mod);
@@ -353,8 +476,10 @@ namespace ModDownloader
                 }
                 catch { }
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine($"Failed to download {mod.Name}. Skipping.");
+                Console.ResetColor();
                 throw ex;
             }
 
@@ -378,8 +503,10 @@ namespace ModDownloader
                 }
                 catch { }
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine($"Failed to extract {mod.Name}. Skipping.");
+                Console.ResetColor();
                 throw ex;
             }
 
@@ -401,8 +528,10 @@ namespace ModDownloader
                 }
                 catch { }
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine($"Failed to create mod directory {modDirectory}. Skipping.");
+                Console.ResetColor();
                 throw ex;
             }
 
@@ -432,8 +561,10 @@ namespace ModDownloader
                 }
                 catch { }
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine($"Failed to move mod files to {modDataDirectory}. Skipping.");
+                Console.ResetColor();
                 throw ex;
             }
 
@@ -467,8 +598,10 @@ namespace ModDownloader
                 }
                 catch { }
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(ex.Message);
                 Console.WriteLine($"Failed to create taint file for {mod.Name}. Skipping.");
+                Console.ResetColor();
                 throw ex;
             }
 
@@ -478,7 +611,9 @@ namespace ModDownloader
             }
             catch { }
 
+            Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Mod downloaded and extracted successfully.");
+            Console.ResetColor();
         }
 
         static void MoveDirectory(string sourceDir, string targetDir)
