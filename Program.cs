@@ -201,7 +201,7 @@ namespace ModDownloader
                 }
                 else
                 {
-                    pavlovModsDirectory = File.ReadAllLines(Path.Combine(pavlovSettingsDirectory, "Config", "Windows", "GameUserSettings.ini")).FirstOrDefault(l => l.ToLower().StartsWith("moddirectory="))?.Split('=')[1] ?? string.Empty;
+                    pavlovModsDirectory = File.ReadAllLines(Path.Combine(pavlovSettingsDirectory, "Config", "Windows", "GameUserSettings.ini")).FirstOrDefault(l => l.ToLower().StartsWith("moddirectory="))?.Split('=').Skip(1).FirstOrDefault() ?? string.Empty;
 
                     if (string.IsNullOrEmpty(pavlovModsDirectory))
                     {
