@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data.Common;
 using System.IO;
 using System.IO.Compression;
@@ -87,7 +87,9 @@ namespace ModDownloader
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(ex);
+                Console.ResetColor();
             }
 
             if (!directDownload)
