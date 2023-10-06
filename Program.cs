@@ -303,7 +303,15 @@ namespace ModDownloader
 
                 foreach (string modDirectory in installedMods)
                 {
-                    string modId = modDirectory.Split("UGC")[1];
+                    string? modId = modDirectory.Split("UGC").Skip(1).FirstOrDefault();
+
+                    if (string.IsNullOrEmpty(modId))
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"The mod directory {modDirectory} does not seem to be a valid Pavlov VR mod. Skipping.");
+                        Console.ResetColor();
+                        continue;
+                    }
 
                     try
                     {
