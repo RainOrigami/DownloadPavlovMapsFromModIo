@@ -11,7 +11,7 @@ This tool will download and update your subscribed Mod.io Pavlov VR mods and als
 # Usage
 
 Make sure you have [.net 6](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win10-x64&apphost_version=6.0.22) installed.  
-To run the program, simply [download](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/releases) and execute.
+To run the program, simply [download](https://github.com/RainOrigami/DownloadPavlovMapsFromModIo/releases/latest/download/DownloadPavlovMapsFromModIo.exe) and execute.
 
 ## Startup parameters
 
@@ -43,7 +43,7 @@ Press `y` and `Enter` to confirm these actions. The download will begin and you 
 
 After all mods are downloaded, press any key to exit the program.
 
-![image](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/assets/51454971/c027606d-b899-4a7d-bf3d-2acacb05e699)
+![image](https://github.com/RainOrigami/DownloadPavlovMapsFromModIo/assets/51454971/c027606d-b899-4a7d-bf3d-2acacb05e699)
 
 # Errors
 
@@ -83,7 +83,7 @@ The OAuth Access Token you supplied during first time setup has expired. You hav
 
 ## Failed to extract Pavlov VR mods from subscribed mods
 
-The data received from Mod.io about your subscribed mods is corrupt in some way. Contact us by creating a [new issue](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/issues).
+The data received from Mod.io about your subscribed mods is corrupt in some way. Contact us by creating a [new issue](https://github.com/RainOrigami/DownloadPavlovMapsFromModIo/issues).
 
 ## No Pavlov VR mods found
 
@@ -95,4 +95,4 @@ The creator of this mod has not made it available on Windows.
 
 ## Any other errors
 
-Contact us by creating a [new issue](https://github.com/Longoon12000/DownloadPavlovMapsFromModIo/issues)
+Contact us by creating a [new issue](https://github.com/RainOrigami/DownloadPavlovMapsFromModIo/issues)
