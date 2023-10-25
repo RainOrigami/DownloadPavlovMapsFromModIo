@@ -37,6 +37,7 @@ namespace ModDownloader
         private const string settingsPath = "./settings.json";
         private const string pavlovSettingsDirectoryBasePath = "%localappdata%\\Pavlov\\Saved";
         private const string modIoBaseUrl = "https://api.mod.io/v1";
+        private const int limit = 100;
 
         record Settings(string AccessToken, string PavlovModsDirectory);
         record Mod(string Id, string LatestVersion, string Name, bool Exists, bool Download);
@@ -48,7 +49,7 @@ namespace ModDownloader
 
         static async Task Main(string[] args)
         {
-            Console.WriteLine("Pavlov VR Mod Downloader version 7");
+            Console.WriteLine("Pavlov VR Mod Downloader version 8");
 
             bool directDownload = false;
             bool subscribedOnly = false;
@@ -251,37 +252,67 @@ namespace ModDownloader
             }
 
             string? subscribedModsJson = null;
-            List<JObject>? subscribedMods = null;
+            List<JObject>? subscribedMods = new();
 
-            try
-            {
-                subscribedModsJson = await getString("/me/subscribed", this.settings.AccessToken);
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.WriteLine("Failed to get subscribed mods from Mod.io. Make sure your token is correct and has read permissions.");
-                Console.ResetColor();
-                return;
-            }
+            int offset = 0;
+            int total = 0;
+            bool allPages = false;
 
-            try
+            while (!allPages)
             {
-                subscribedMods = extractModsByGameId(subscribedModsJson, 3959);
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.WriteLine("Failed to extract Pavlov VR mods from subscribed mods. Make sure you are subscribed to Pavlov VR mods and that your token is correct.");
-                Console.ResetColor();
-                if (subscribedOnly)
+
+                try
                 {
+                    subscribedModsJson = await getString($"/me/subscribed?_limit={limit}&_offset={offset}", this.settings.AccessToken);
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine("Failed to get subscribed mods from Mod.io. Make sure your token is correct and has read permissions.");
+                    Console.ResetColor();
                     return;
                 }
 
-                subscribedMods = new();
+                try
+                {
+                    JObject jsonData = JObject.Parse(subscribedModsJson);
+
+                    if (jsonData["result_count"]?.Value<int>() is int resultCount && jsonData["result_total"]?.Value<int>() is int resultTotal)
+                    {
+                        total += resultCount;
+
+                        if (resultTotal > total)
+                        {
+                            offset += limit;
+                        }
+                        else
+                        {
+                            allPages = true;
+                        }
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("Could not determine if all pages have been loaded. Assuming all pages have been loaded.");
+                        Console.ResetColor();
+                        allPages = true;
+                    }
+
+                    JArray mods = (JArray)jsonData["data"]!;
+                    subscribedMods.AddRange(extractModsByGameId(mods, 3959));
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine("Failed to extract Pavlov VR mods from subscribed mods. Make sure you are subscribed to Pavlov VR mods and that your token is correct.");
+                    Console.ResetColor();
+                    if (subscribedOnly)
+                    {
+                        return;
+                    }
+                }
             }
 
             Console.WriteLine($"Found {subscribedMods.Count} subscribed Pavlov VR mods.");
@@ -403,7 +434,7 @@ namespace ModDownloader
             {
                 Console.Write("Do you want to continue? (Y/n): ");
                 string? continueOption = Console.ReadLine();
-                
+
                 if (continueOption?.Trim().ToLower() != "y" && !string.IsNullOrEmpty(continueOption?.Trim()))
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -439,10 +470,8 @@ namespace ModDownloader
             Console.WriteLine("Done.");
         }
 
-        private static List<JObject> extractModsByGameId(string subscribedModsJson, int gameId)
+        private static List<JObject> extractModsByGameId(JArray mods, int gameId)
         {
-            JObject jsonData = JObject.Parse(subscribedModsJson);
-            JArray mods = (JArray)jsonData["data"]!;
             List<JObject> selectedMods = new();
 
             foreach (JObject mod in mods)
