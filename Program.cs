@@ -263,7 +263,7 @@ namespace ModDownloader
 
                 try
                 {
-                    subscribedModsJson = await getString($"/me/subscribed?_limit={limit}&_offset={offset}", this.settings.AccessToken);
+                    subscribedModsJson = await getString($"/me/subscribed?game_id=3959&_limit={limit}&_offset={offset}", this.settings.AccessToken);
                 }
                 catch (Exception ex)
                 {
