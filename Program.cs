@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -46,6 +47,7 @@ namespace ModDownloader
 
         private bool directDownload = false;
         private bool subscribedOnly = false;
+        private bool skipFailedDownloads = false;
 
         static async Task Main(string[] args)
         {
@@ -53,6 +55,7 @@ namespace ModDownloader
 
             bool directDownload = false;
             bool subscribedOnly = false;
+            bool skipFailedDownloads = false;
 
             foreach (string arg in args)
             {
@@ -74,6 +77,14 @@ namespace ModDownloader
                         Console.ResetColor();
 
                         break;
+                    case "--skipfaileddownloads":
+                        skipFailedDownloads = true;
+
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("Skip failed downloads enabled. Failed downloads will be skipped.");
+                        Console.ResetColor();
+
+                        break;
                     default:
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine($"Unknown argument: {arg}");
@@ -84,7 +95,7 @@ namespace ModDownloader
 
             try
             {
-                await new Program(directDownload, subscribedOnly).execute();
+                await new Program(directDownload, subscribedOnly, skipFailedDownloads).execute();
             }
             catch (Exception ex)
             {
@@ -101,16 +112,17 @@ namespace ModDownloader
             }
         }
 
-        public Program(bool directDownload, bool subscribedOnly)
+        public Program(bool directDownload, bool subscribedOnly, bool skipFailedDownloads)
         {
             this.directDownload = directDownload;
             this.subscribedOnly = subscribedOnly;
+            this.skipFailedDownloads = skipFailedDownloads;
         }
 
         private static HttpClient createClient(string accessToken)
         {
             HttpClient client = new();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             return client;
         }
 
@@ -126,34 +138,69 @@ namespace ModDownloader
             return await response.Content.ReadAsStringAsync();
         }
 
-        static async Task download(string url, string destination, string accessToken)
+        private async Task download(string url, string destination, string accessToken)
         {
+            long totalBytes = -1;
+            long receivedBytes = 0;
+
             using (HttpClient client = createClient(accessToken))
             {
-                using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                while (true)
                 {
-                    response.EnsureSuccessStatusCode();
-
-                    long totalBytes = response.Content.Headers.ContentLength ?? -1;
-                    long receivedBytes = 0;
-
-                    using (var contentStream = await response.Content.ReadAsStreamAsync())
-                    using (var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write))
+                    try
                     {
-                        var buffer = new byte[4096];
-                        int bytesRead;
-
-                        var progressBar = new ProgressBar(totalBytes);
-
-                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                         {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
+                            request.Headers.Range = new RangeHeaderValue(receivedBytes, null);
 
-                            receivedBytes += bytesRead;
-                            progressBar.Update(receivedBytes);
+                            using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+                            {
+                                response.EnsureSuccessStatusCode();
+
+                                if (totalBytes == -1)
+                                {
+                                    totalBytes = response.Content.Headers.ContentRange?.Length ?? -1;
+                                }
+
+                                using (var contentStream = await response.Content.ReadAsStreamAsync())
+                                using (var fileStream = new FileStream(destination, FileMode.Append, FileAccess.Write))
+                                {
+                                    var buffer = new byte[1048576]; // 1MB buffer
+                                    int bytesRead;
+
+                                    var progressBar = new ProgressBar(totalBytes);
+
+                                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                    {
+                                        await fileStream.WriteAsync(buffer, 0, bytesRead);
+
+                                        receivedBytes += bytesRead;
+                                        progressBar.Update(receivedBytes);
+                                    }
+
+                                    progressBar.Finish();
+                                }
+                            }
                         }
 
-                        progressBar.Finish();
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (skipFailedDownloads)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"Error: {ex.Message}. Skipping download...");
+                            Console.ResetColor();
+                            return;
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"Error: {ex.Message}. Retrying and resuming download...");
+                            Console.ResetColor();
+                            await Task.Delay(1000);
+                        }
                     }
                 }
             }
@@ -486,7 +533,7 @@ namespace ModDownloader
             return selectedMods;
         }
 
-        private static async Task downloadAndExtractMod(string downloadUrl, Settings settings, Mod mod)
+        private async Task downloadAndExtractMod(string downloadUrl, Settings settings, Mod mod)
         {
             if (!mod.Download)
             {
