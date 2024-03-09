@@ -126,81 +126,77 @@ namespace ModDownloader
             return client;
         }
 
-        private static async Task<HttpResponseMessage> get(string endpoint, string accessToken)
+        private static async Task<HttpResponseMessage> get(string endpoint, HttpClient client)
         {
-            HttpClient client = createClient(accessToken);
             return await client.GetAsync($"{modIoBaseUrl}{endpoint}");
         }
 
-        private static async Task<string> getString(string endpoint, string accessToken)
+        private static async Task<string> getString(string endpoint, HttpClient client)
         {
-            HttpResponseMessage response = await get(endpoint, accessToken);
+            HttpResponseMessage response = await get(endpoint, client);
             return await response.Content.ReadAsStringAsync();
         }
 
-        private async Task download(string url, string destination, string accessToken)
+        private async Task download(string url, string destination, HttpClient client)
         {
             long totalBytes = -1;
             long receivedBytes = 0;
 
-            using (HttpClient client = createClient(accessToken))
+            while (true)
             {
-                while (true)
+                try
                 {
-                    try
+                    using (var request = new HttpRequestMessage(HttpMethod.Get, url))
                     {
-                        using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                        request.Headers.Range = new RangeHeaderValue(receivedBytes, null);
+
+                        using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
                         {
-                            request.Headers.Range = new RangeHeaderValue(receivedBytes, null);
+                            response.EnsureSuccessStatusCode();
 
-                            using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+                            if (totalBytes == -1)
                             {
-                                response.EnsureSuccessStatusCode();
+                                totalBytes = response.Content.Headers.ContentRange?.Length ?? -1;
+                            }
 
-                                if (totalBytes == -1)
+                            using (var contentStream = await response.Content.ReadAsStreamAsync())
+                            using (var fileStream = new FileStream(destination, FileMode.Append, FileAccess.Write))
+                            {
+                                var buffer = new byte[1048576]; // 1MB buffer
+                                int bytesRead;
+
+                                var progressBar = new ProgressBar(totalBytes);
+
+                                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                                 {
-                                    totalBytes = response.Content.Headers.ContentRange?.Length ?? -1;
+                                    await fileStream.WriteAsync(buffer, 0, bytesRead);
+
+                                    receivedBytes += bytesRead;
+                                    progressBar.Update(receivedBytes);
                                 }
 
-                                using (var contentStream = await response.Content.ReadAsStreamAsync())
-                                using (var fileStream = new FileStream(destination, FileMode.Append, FileAccess.Write))
-                                {
-                                    var buffer = new byte[1048576]; // 1MB buffer
-                                    int bytesRead;
-
-                                    var progressBar = new ProgressBar(totalBytes);
-
-                                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                                    {
-                                        await fileStream.WriteAsync(buffer, 0, bytesRead);
-
-                                        receivedBytes += bytesRead;
-                                        progressBar.Update(receivedBytes);
-                                    }
-
-                                    progressBar.Finish();
-                                }
+                                progressBar.Finish();
                             }
                         }
-
-                        break;
                     }
-                    catch (Exception ex)
+
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (skipFailedDownloads)
                     {
-                        if (skipFailedDownloads)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"Error: {ex.Message}. Skipping download...");
-                            Console.ResetColor();
-                            return;
-                        }
-                        else
-                        {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"Error: {ex.Message}. Retrying and resuming download...");
-                            Console.ResetColor();
-                            await Task.Delay(1000);
-                        }
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Error: {ex.Message}. Skipping download...");
+                        Console.ResetColor();
+                        return;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Error: {ex.Message}. Retrying and resuming download...");
+                        Console.ResetColor();
+                        await Task.Delay(1000);
                     }
                 }
             }
@@ -228,8 +224,8 @@ namespace ModDownloader
                         accessToken = null;
                         continue;
                     }
-
-                    HttpResponseMessage response = await get("/me", accessToken);
+                    HttpClient clientTest = createClient(accessToken);
+                    HttpResponseMessage response = await get("/me", clientTest);
                     if (!response.IsSuccessStatusCode)
                     {
                         Console.WriteLine("Failed to get user data from Mod.io. Make sure your token is correct and has read permissions.");
@@ -304,13 +300,14 @@ namespace ModDownloader
             int offset = 0;
             int total = 0;
             bool allPages = false;
+            HttpClient client = createClient(this.settings.AccessToken);
 
             while (!allPages)
             {
 
                 try
                 {
-                    subscribedModsJson = await getString($"/me/subscribed?game_id=3959&_limit={limit}&_offset={offset}", this.settings.AccessToken);
+                    subscribedModsJson = await getString($"/me/subscribed?game_id=3959&_limit={limit}&_offset={offset}", client);
                 }
                 catch (Exception ex)
                 {
@@ -393,7 +390,7 @@ namespace ModDownloader
 
                     try
                     {
-                        JObject mod = JObject.Parse(await getString($"/games/3959/mods/{modId}", this.settings.AccessToken));
+                        JObject mod = JObject.Parse(await getString($"/games/3959/mods/{modId}", client));
                         if (mod["error"] is not null)
                         {
                             throw new Exception(mod["error"]?["message"]?.ToString() ?? $"Unknown error ({mod})");
@@ -493,7 +490,7 @@ namespace ModDownloader
 
             foreach (Mod mod in modsToDownload.Where(m => m.Download).OrderByDescending(m => m.Exists))
             {
-                string modFilesJson = await getString($"/games/3959/mods/{mod.Id}/files/{mod.LatestVersion}", settings.AccessToken);
+                string modFilesJson = await getString($"/games/3959/mods/{mod.Id}/files/{mod.LatestVersion}", client);
 
                 JObject jsonData = JObject.Parse(modFilesJson);
 
@@ -503,7 +500,7 @@ namespace ModDownloader
 
                 try
                 {
-                    await downloadAndExtractMod(downloadUrl, settings, mod);
+                    await downloadAndExtractMod(downloadUrl, settings, client, mod);
                 }
                 catch (Exception ex)
                 {
@@ -533,7 +530,7 @@ namespace ModDownloader
             return selectedMods;
         }
 
-        private async Task downloadAndExtractMod(string downloadUrl, Settings settings, Mod mod)
+        private async Task downloadAndExtractMod(string downloadUrl, Settings settings, HttpClient client, Mod mod)
         {
             if (!mod.Download)
             {
@@ -552,7 +549,7 @@ namespace ModDownloader
 
             try
             {
-                await download(downloadUrl, tempZipFile, settings.AccessToken);
+                await download(downloadUrl, tempZipFile, client);
             }
             catch (Exception ex)
             {
